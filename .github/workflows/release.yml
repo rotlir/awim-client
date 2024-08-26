@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - new-pr  # Укажите ветку, на которую должно реагировать событие
+      - main
 
 jobs:
   build:
