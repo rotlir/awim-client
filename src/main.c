@@ -8,11 +8,14 @@
 #include <pw.h>
 #include <ui.h>
 #include <udp.h>
+#include <tcp.h>
 
 #define BUFSIZE 2048 * sizeof(int16_t)
 
+char *pw_target = "AWiM-sink";
 char *server_address = NULL;
 unsigned port = -1;
+int tcp_mode = 0;
 
 int is_valid_ip(const char *ip)
 {
@@ -37,13 +40,18 @@ void display_help()
 	char *help_message =
 		"Usage: awim --ip [IP] --port [PORT]\n"
 		"If port and(or) IP address were not specified, the program will ask for them.\n\n"
+		"Other arguments:\n"
+		"\t`--tcp-mode`: Launch AWiM in TCP mode (it uses UDP to transmit data by default)\n\n"
+		"\t`--pw-target [TARGET]`: make AWiM output sound to some node.\n"
+		"\tFor example: `awim --pw-target default` will make AWiM output to your default playback device\n"
+		"\n\n"
 		"Author: rotlir.\n"
 		"The repository is available at https://github.com/rotlir/awim-client/\n";
 	printf("%s", help_message);
 }
 
 int main(int argc, char *argv[])
-{	
+{
 	int address_from_args = 0;
 	for (int i = 1; i < argc; i++)
 	{
@@ -62,6 +70,15 @@ int main(int argc, char *argv[])
 		{
 			i++;
 			port = atoi(argv[i]);
+		}
+		if (!strcmp(argv[i], "--pw-target"))
+		{
+			i++;
+			pw_target = argv[i];
+		}
+		if (!strcmp(argv[i], "--tcp-mode"))
+		{
+			tcp_mode = 1;
 		}
 	}
 	if (server_address == NULL)
@@ -90,8 +107,19 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	printf("Connecting to %s:%i\n", server_address, port);
-	udp_init(server_address, port);
-	int exit_code = start_pipewire(&argc, argv, BUFSIZE);
-	if (!address_from_args) free(server_address);
+	if (tcp_mode)
+	{
+		printf("Starting AWiM in TCP mode\n");
+		if (tcp_init(server_address, port, pthread_self()) == 0)
+			return -1;
+	}
+	else
+	{
+		if (udp_init(server_address, port) == 0)
+			return -1;
+	}
+	int exit_code = start_pipewire(&argc, argv, BUFSIZE, pw_target, tcp_mode);
+	if (!address_from_args)
+		free(server_address);
 	return exit_code;
 }

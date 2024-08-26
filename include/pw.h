@@ -14,4 +14,4 @@ struct pw_data
         int16_t *qbuf;
 };
 
-int start_pipewire(int *argc, char *argv[], unsigned packet_size);
+int start_pipewire(int *argc, char *argv[], unsigned packet_size, char* pw_target, int tcp_mode);

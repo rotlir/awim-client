@@ -5,7 +5,7 @@
 struct udp_message_properties
 {
     queue_t *q;
-    int *stop;
+    volatile int *stop;
 };
 
 int udp_init(char *server_address, unsigned port);

@@ -13,6 +13,7 @@ typedef struct queue
     unsigned maxsize;
     pthread_mutex_t mutex;
     pthread_cond_t half_filled;
+    volatile int quit;
 } queue_t;
 
 /*

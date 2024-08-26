@@ -43,15 +43,22 @@ void *udp_receive(void *p)
 {
     struct udp_message_properties *data = p;
     int16_t *udp_buf = NULL;
+    struct timespec ts = {.tv_sec = 0, .tv_nsec = 3000000};
+    int timeout_attempt = 1;
     while (1)
-    {
+    {    
+        nanosleep(&ts, NULL);
+        nowait:
         if (*data->stop)
         {
             free(udp_buf);
+            close(socket_desc);
+            *data->stop = 2;
+            data->q->quit = 1;
             return NULL;
         }
         int capacity = q_get_capacity(data->q);
-        if (capacity > data->q->maxsize / 2)
+        if (capacity >= data->q->maxsize / 2)
         {
             int size = capacity * sizeof(int16_t);
             udp_buf = malloc(size);
@@ -67,10 +74,14 @@ void *udp_receive(void *p)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                 {
-                    // fprintf(stderr, "timed out waiting for data from server\n");
-                    continue;
+                    fprintf(stderr, "timed out waiting for data from server; attempt %i\n", timeout_attempt);
+                    timeout_attempt++;
+                    free(udp_buf);
+                    udp_buf = NULL;
+                    goto nowait;
                 }
             }
+            timeout_attempt = 1;
             q_enqueue(data->q, udp_buf, capacity);
             free(udp_buf);
             udp_buf = NULL;
