@@ -14,11 +14,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up make
-        run: sudo apt-get update && sudo apt-get install -y make
-
-      - name: Build with make
-        run: make
+      - name: Build with Arch Linux
+        run: |
+          docker run --name arch_build -v ${{ github.workspace }}:/workspace -w /workspace archlinux:latest /bin/bash -c "
+          pacman-key --init && \
+          pacman-key --populate archlinux && \
+          pacman -Syu --noconfirm && \
+          pacman -S --noconfirm base-devel pipewire &&\
+          make"
 
       - name: Create Pre-release
         id: create_release
