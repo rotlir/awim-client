@@ -1,0 +1,43 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - new-pr  # Укажите ветку, на которую должно реагировать событие
+
+jobs:
+  build:
+    name: Build and Upload to Pre-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up make
+        run: sudo apt-get update && sudo apt-get install -y make
+
+      - name: Build with make
+        run: make
+
+      - name: Create Pre-release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.sha }}
+          release_name: "Build from commit ${{ github.sha }}"
+          prerelease: true
+          draft: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./awim
+          asset_name: awim
+          asset_content_type: application/octet-stream
+
