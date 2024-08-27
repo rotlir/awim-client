@@ -1,0 +1,50 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Upload to Pre-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build with Arch Linux
+        run: |
+          docker run --name arch_build -v ${{ github.workspace }}:/workspace -w /workspace archlinux:latest /bin/bash -c "
+          pacman-key --init && \
+          pacman-key --populate archlinux && \
+          pacman -Syu --noconfirm && \
+          pacman -S --noconfirm base-devel pipewire &&\
+          make"
+
+      - name: Get short commit SHA
+        id: vars
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Create Pre-release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "build-${{ env.SHORT_SHA }}"
+          release_name: "Build from commit ${{ env.SHORT_SHA }}"
+          prerelease: true
+          draft: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./awim
+          asset_name: awim
+          asset_content_type: application/octet-stream
+
