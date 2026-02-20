@@ -11,7 +11,11 @@ permissions:
 
 jobs:
   build-glibc:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x86_64, aarch64 ]
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
       image: docker.io/debian:bookworm
 
@@ -28,17 +32,21 @@ jobs:
         run: make
 
       - name: Rename
-        run: mv awim awim-glibc
+        run: mv awim awim-glibc-${{ matrix.arch }}
 
       - name: Upload glibc build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: awim-glibc
-          path: ./awim-glibc
+          name: awim-glibc-${{ matrix.arch }}
+          path: ./awim-glibc-${{ matrix.arch }}
           if-no-files-found: error
 
   build-musl:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x86_64, aarch64 ]
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
       image: docker.io/alpine:3.23
 
@@ -53,13 +61,13 @@ jobs:
         run: make
 
       - name: Rename
-        run: mv awim awim-musl
+        run: mv awim awim-musl-${{ matrix.arch }}
 
       - name: Upload musl build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: awim-musl
-          path: ./awim-musl
+          name: awim-musl-${{ matrix.arch }}
+          path: ./awim-musl-${{ matrix.arch }}
           if-no-files-found: error
 
   release:
