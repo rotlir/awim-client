@@ -24,7 +24,7 @@ jobs:
           apt-get update
           apt-get install -y make pkg-config gcc libpipewire-0.3-dev
 
-      - name: Build project
+      - name: Build binary
         run: make
 
       - name: Rename
@@ -49,8 +49,11 @@ jobs:
       - name: Install dependencies
         run: apk add --no-cache make pkgconf musl-dev pipewire-dev gcc
 
-      - name: Build musl binary
-        run: make musl
+      - name: Build binary
+        run: make
+
+      - name: Rename
+        run: mv awim awim-musl
 
       - name: Upload musl build artifact
         uses: actions/upload-artifact@v4

@@ -11,11 +11,5 @@ all: awim
 awim:
 	$(CC) $(CFLAGS) $(SOURCES) -o $@ $(PIPEWIRE_FLAGS) -I./include -lpthread $(LDFLAGS)
 
-awim-musl: CFLAGS += -include sys/time.h
-awim-musl:
-	$(CC) $(CFLAGS) $(SOURCES) -o $@ $(PIPEWIRE_FLAGS) -I./include -lpthread $(LDFLAGS)
-
-musl: awim-musl
-
 clean:
-	rm -f awim awim-musl
+	rm -f awim
