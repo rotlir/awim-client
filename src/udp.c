@@ -6,6 +6,8 @@
 #include <errno.h>
 #include <time.h>
 
+#include <sys/time.h>
+
 struct sockaddr_in server;
 int socket_desc;
 char *server_addr;
