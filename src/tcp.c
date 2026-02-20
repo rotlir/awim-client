@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <queue.h>
 #include <tcp.h>
@@ -103,6 +104,10 @@ void *tcp_receive(void *p)
             q_enqueue(data->q, buf, capacity);
             free(buf);
             buf = NULL;
+        } else {
+            // without this delay, the thread starts consuming too much CPU time
+            struct timespec ts = {.tv_sec=0, .tv_nsec=0.05e9};
+            nanosleep(&ts, NULL);
         }
     }
 }
