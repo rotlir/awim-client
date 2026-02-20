@@ -4,51 +4,93 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build:
-    name: Build and Upload to Pre-release
+  build-glibc:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/debian:bookworm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y make pkg-config gcc libpipewire-0.3-dev
+
+      - name: Build project
+        run: make
+
+      - name: Rename
+        run: mv awim awim-glibc
+
+      - name: Upload glibc build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: awim-glibc
+          path: ./awim-glibc
+          if-no-files-found: error
+
+  build-musl:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/alpine:3.23
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: apk add --no-cache make pkgconf musl-dev pipewire-dev
+
+      - name: Build musl binary
+        run: make musl
+
+      - name: Upload musl build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: awim-musl
+          path: ./awim-musl
+          if-no-files-found: error
+
+  release:
+    needs:
+      - build-glibc
+      - build-musl
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build with Arch Linux
-        run: |
-          docker run --name arch_build -v ${{ github.workspace }}:/workspace -w /workspace archlinux:latest /bin/bash -c "
-          pacman-key --init && \
-          pacman-key --populate archlinux && \
-          pacman -Syu --noconfirm && \
-          pacman -S --noconfirm base-devel pipewire &&\
-          make"
+      - name: Download all binary
+        uses: actions/download-artifact@v4
+        with:
+          pattern: awim-*
+          path: builds
+          merge-multiple: true
 
       - name: Get short commit SHA and commit count
         id: vars
-        run: | 
+        run: |
           echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "COMMIT_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
 
-      - name: Create Pre-release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create release
+        uses: softprops/action-gh-release@v2.3.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: "build-${{ env.SHORT_SHA }}-${{ env.COMMIT_NUMBER }}"
-          release_name: "Build from commit ${{ env.SHORT_SHA }}"
-          prerelease: true
-          draft: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./awim
-          asset_name: awim
-          asset_content_type: application/octet-stream
-
+          tag_name: build-${{ env.SHORT_SHA }}-${{ env.COMMIT_NUMBER }}
+          name: Build from commit ${{ env.SHORT_SHA }}
+          generate_release_notes: false
+          prerelease: false
+          files: builds/awim-*
