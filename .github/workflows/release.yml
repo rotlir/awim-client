@@ -2,8 +2,8 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
   workflow_dispatch:
 
 permissions:
@@ -97,8 +97,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: build-${{ env.SHORT_SHA }}-${{ env.COMMIT_NUMBER }}
-          name: Build from commit ${{ env.SHORT_SHA }}
-          generate_release_notes: false
+          tag_name: ${{ github.ref_name }}
+          name: AWiM ${{ github.ref_name }}
+          generate_release_notes: true
           prerelease: false
           files: builds/awim-*
