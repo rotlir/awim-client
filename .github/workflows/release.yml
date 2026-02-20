@@ -1,96 +1,28 @@
-name: Build and Release
+name: Release
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-glibc:
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ x86_64, aarch64 ]
-    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    container:
-      image: docker.io/debian:bookworm
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Install dependencies
-        run: |
-          apt-get update
-          apt-get install -y make pkg-config gcc libpipewire-0.3-dev
-
-      - name: Build binary
-        run: make
-
-      - name: Rename
-        run: mv awim awim-glibc-${{ matrix.arch }}
-
-      - name: Upload glibc build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: awim-glibc-${{ matrix.arch }}
-          path: ./awim-glibc-${{ matrix.arch }}
-          if-no-files-found: error
-
-  build-musl:
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ x86_64, aarch64 ]
-    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Build in alpine
-        run: |
-          docker run --rm -v $PWD:/src -w /src docker.io/alpine:3.23 \
-          sh -c "apk add --no-cache make pkgconf musl-dev pipewire-dev gcc && make"
-
-      - name: Rename
-        run: mv awim awim-musl-${{ matrix.arch }}
-
-      - name: Upload musl build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: awim-musl-${{ matrix.arch }}
-          path: ./awim-musl-${{ matrix.arch }}
-          if-no-files-found: error
+  build:
+    uses: ./.github/workflows/build.yml
 
   release:
-    needs:
-      - build-glibc
-      - build-musl
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download all binary
+      - name: Download all binaries
         uses: actions/download-artifact@v4
         with:
           pattern: awim-*
           path: builds
           merge-multiple: true
-
-      - name: Get short commit SHA and commit count
-        id: vars
-        run: |
-          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "COMMIT_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
 
       - name: Create release
         uses: softprops/action-gh-release@v2.3.2
