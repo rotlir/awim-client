@@ -4,7 +4,7 @@ PKG_CONFIG ?= pkg-config
 SOURCES = ./src/main.c ./src/pw.c ./src/ui.c ./src/udp.c ./src/tcp.c ./src/queue.c
 PIPEWIRE_FLAGS = $(shell $(PKG_CONFIG) --libs --cflags libpipewire-0.3)
 
-.PHONY: all musl clean
+.PHONY: all clean
 
 all: awim
 
