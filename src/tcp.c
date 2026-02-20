@@ -10,6 +10,7 @@
 
 #include <queue.h>
 #include <tcp.h>
+#include <sys/time.h>
 
 static int sockfd;
 static struct sockaddr_in servaddr;
