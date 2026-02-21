@@ -1,0 +1,62 @@
+name: Build
+
+on:
+  workflow_call:
+
+jobs:
+  build-glibc:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x86_64, aarch64 ]
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    container:
+      image: docker.io/debian:bookworm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y make pkg-config gcc libpipewire-0.3-dev
+
+      - name: Build binary
+        run: make
+
+      - name: Rename
+        run: mv awim awim-glibc-${{ matrix.arch }}
+
+      - name: Upload glibc build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: awim-glibc-${{ matrix.arch }}
+          path: ./awim-glibc-${{ matrix.arch }}
+          if-no-files-found: error
+
+  build-musl:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x86_64, aarch64 ]
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Build in alpine
+        run: |
+          docker run --rm -v $PWD:/src -w /src docker.io/alpine:3.23 \
+          sh -c "apk add --no-cache make pkgconf musl-dev pipewire-dev gcc && make"
+
+      - name: Rename
+        run: mv awim awim-musl-${{ matrix.arch }}
+
+      - name: Upload musl build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: awim-musl-${{ matrix.arch }}
+          path: ./awim-musl-${{ matrix.arch }}
+          if-no-files-found: error
