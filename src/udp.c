@@ -47,6 +47,7 @@ void *udp_receive(void *p)
     int16_t *udp_buf = NULL;
     struct timespec ts = {.tv_sec = 0, .tv_nsec = 3000000};
     int timeout_attempt = 1;
+    int connected = 0;
     while (1)
     {    
         nanosleep(&ts, NULL);
@@ -79,12 +80,18 @@ void *udp_receive(void *p)
                     fprintf(stderr, "timed out waiting for data from server; attempt %i\n", timeout_attempt);
                     timeout_attempt++;
                     free(udp_buf);
+                    connected = 0;
                     udp_buf = NULL;
                     goto nowait;
                 }
             }
             timeout_attempt = 1;
             q_enqueue(data->q, udp_buf, capacity);
+            if (!connected)
+            {
+                puts("Connected");
+                connected = 1;
+            }
             free(udp_buf);
             udp_buf = NULL;
         }
